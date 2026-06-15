@@ -1,65 +1,60 @@
-import Image from "next/image";
+import Link from 'next/link'
 
-export default function Home() {
+const FEATURES = [
+  { icon: '📷', label: 'AI scan struk otomatis' },
+  { icon: '👥', label: 'Assign item ke tiap orang' },
+  { icon: '🧾', label: 'Hitung pajak & biaya layanan' },
+  { icon: '📤', label: 'Bagikan tagihan & export PDF' },
+]
+
+export default function LandingPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-gray-950 flex flex-col px-6 pt-16 pb-8">
+
+      {/* Badge */}
+      <p className="text-[11px] font-semibold tracking-widest text-gray-500 uppercase mb-12">
+        Split Bill App
+      </p>
+
+      {/* Hero */}
+      <div className="flex-1">
+        <h1 className="text-[52px] font-black leading-[1.05] text-white">
+          Bagi<br />
+          tagihan<br />
+          <span className="text-gray-600">bareng.</span>
+        </h1>
+
+        <p className="mt-6 text-gray-400 text-base leading-relaxed">
+          Foto struk, AI baca otomatis,<br />
+          assign ke siapa aja, selesai.
+        </p>
+
+        {/* Features */}
+        <div className="mt-10 space-y-3.5">
+          {FEATURES.map((f) => (
+            <div key={f.label} className="flex items-center gap-3.5">
+              <div className="w-8 h-8 bg-gray-800 rounded-xl flex items-center justify-center text-base shrink-0">
+                {f.icon}
+              </div>
+              <p className="text-gray-300 text-sm">{f.label}</p>
+            </div>
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
+
+      {/* CTA */}
+      <div className="mt-12 space-y-3">
+        <Link
+          href="/scan"
+          className="block w-full py-4 bg-white text-gray-950 font-bold rounded-2xl text-center text-base active:scale-[0.98] transition-transform"
+        >
+          Mulai Split Bill →
+        </Link>
+        <p className="text-center text-xs text-gray-600">
+          Gratis · Tidak perlu login
+        </p>
+      </div>
+
     </div>
-  );
+  )
 }
