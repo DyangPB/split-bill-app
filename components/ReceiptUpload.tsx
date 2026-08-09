@@ -10,6 +10,7 @@ export default function ReceiptUpload() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const setItems = useReceiptStore((s) => s.setItems)
+  const setCharges = useReceiptStore((s) => s.setCharges)
   const router = useRouter()
 
   async function handleFile(file: File) {
@@ -26,12 +27,26 @@ export default function ReceiptUpload() {
 
     if (!text) { setError('Server tidak merespons'); return }
 
-    let data: { error?: string; items?: { name: string; price: number; qty: number }[] }
+    let data: {
+      error?: string
+      items?: { name: string; price: number; qty: number }[]
+      tax?: number | null
+      service?: number | null
+    }
     try { data = JSON.parse(text) } catch { setError('Respons server tidak valid'); return }
 
     if (!res.ok || data.error) { setError(data.error ?? 'Gagal membaca struk'); return }
 
     setItems(data.items ?? [])
+
+    // Auto-apply pajak & service yang terdeteksi dari struk
+    if (data.tax != null && data.tax > 0) {
+      setCharges({ taxEnabled: true, taxRate: data.tax })
+    }
+    if (data.service != null && data.service > 0) {
+      setCharges({ serviceEnabled: true, serviceRate: data.service })
+    }
+
     router.push('/items')
   }
 

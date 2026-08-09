@@ -31,8 +31,15 @@ export default function ChargesConfig() {
       <div className={`bg-white rounded-2xl border transition-colors ${charges.taxEnabled ? 'border-gray-200' : 'border-gray-100'}`}>
         <div className="px-4 py-4 flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-gray-800">Pajak (PPN)</p>
-            <p className="text-xs text-gray-400 mt-0.5">Ditambahkan ke setiap orang secara proporsional</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-gray-800">Pajak (PPN)</p>
+              {charges.taxEnabled && (
+                <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-md">
+                  Terdeteksi
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-0.5">Ditambahkan proporsional ke setiap orang</p>
           </div>
           <Toggle on={charges.taxEnabled} onToggle={() => setCharges({ taxEnabled: !charges.taxEnabled })} />
         </div>
@@ -58,7 +65,14 @@ export default function ChargesConfig() {
       <div className={`bg-white rounded-2xl border transition-colors ${charges.serviceEnabled ? 'border-gray-200' : 'border-gray-100'}`}>
         <div className="px-4 py-4 flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-gray-800">Biaya Layanan</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-gray-800">Biaya Layanan</p>
+              {charges.serviceEnabled && (
+                <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-md">
+                  Terdeteksi
+                </span>
+              )}
+            </div>
             <p className="text-xs text-gray-400 mt-0.5">Service charge restoran</p>
           </div>
           <Toggle on={charges.serviceEnabled} onToggle={() => setCharges({ serviceEnabled: !charges.serviceEnabled })} />
