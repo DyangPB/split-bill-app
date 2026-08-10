@@ -214,7 +214,7 @@ export default function BillSummary() {
                     className="flex justify-between items-center gap-3 py-3 border-b-[3px] border-dashed border-ink"
                   >
                     <span className="truncate">{it.name}</span>
-                    <span className="font-headline text-money tabular-nums shrink-0">
+                    <span className="font-headline text-base md:text-money tabular-nums shrink-0">
                       {money(it.share)}
                     </span>
                   </li>
@@ -222,7 +222,7 @@ export default function BillSummary() {
                 {fees > 0 && (
                   <li className="flex justify-between items-center gap-3 py-3 border-b-[3px] border-dashed border-ink text-on-surface-variant">
                     <span>Tax &amp; Service ({feeRate}%)</span>
-                    <span className="font-headline text-money tabular-nums shrink-0">{money(fees)}</span>
+                    <span className="font-headline text-base md:text-money tabular-nums shrink-0">{money(fees)}</span>
                   </li>
                 )}
               </ul>
@@ -277,9 +277,9 @@ export default function BillSummary() {
             </dl>
           </div>
 
-          <div className="bg-yellow p-card-padding border-t-4 border-ink flex justify-between items-center">
-            <span className="font-headline text-label-caps">GRAND TOTAL</span>
-            <span className="font-headline text-headline-sm tracking-tighter tabular-nums">
+          <div className="bg-yellow p-card-padding border-t-4 border-ink flex justify-between items-center gap-3">
+            <span className="font-headline text-label-caps shrink-0">GRAND TOTAL</span>
+            <span className="font-headline text-lg md:text-headline-sm tracking-tighter tabular-nums text-right min-w-0">
               Rp {money(grandTotal)}
             </span>
           </div>

@@ -90,7 +90,7 @@ function RateInput({
         <span className="font-headline text-lg font-black">%</span>
       </div>
       <span className="font-body text-sm text-on-surface-variant">of subtotal</span>
-      <span className="ml-auto font-headline text-money tabular-nums">Rp {money(amount)}</span>
+      <span className="ml-auto font-headline text-base md:text-money tabular-nums">Rp {money(amount)}</span>
     </div>
   )
 }
@@ -207,9 +207,9 @@ export default function ChargesConfig() {
               </dl>
             </div>
 
-            <div className="bg-yellow p-card-padding border-t-4 border-ink flex justify-between items-center">
-              <span className="font-headline text-label-caps">TOTAL</span>
-              <span className="font-headline text-headline-sm tracking-tighter tabular-nums">
+            <div className="bg-yellow p-card-padding border-t-4 border-ink flex justify-between items-center gap-3">
+              <span className="font-headline text-label-caps shrink-0">TOTAL</span>
+              <span className="font-headline text-lg md:text-headline-sm tracking-tighter tabular-nums text-right min-w-0">
                 Rp {money(total)}
               </span>
             </div>
