@@ -24,7 +24,7 @@ function ItemRow({
   onRemove: (index: number) => void
 }) {
   return (
-    <div className="grid grid-cols-12 gap-2 md:gap-4 items-center bg-white p-3 mb-4 mp-outline mp-shadow-sm relative group">
+    <div className="grid grid-cols-12 gap-1.5 md:gap-4 items-center bg-white p-3 mb-4 mp-outline mp-shadow-sm relative group">
       <div className="col-span-1 hidden md:flex md:order-1 justify-center text-outline group-hover:text-secondary">
         <Icon name="drag_indicator" className="w-5 h-5" />
       </div>
@@ -36,19 +36,21 @@ function ItemRow({
         className="col-span-11 md:col-span-4 order-1 md:order-2 bg-transparent border-none outline-none font-body text-body-lg font-bold min-w-0"
       />
 
-      <div className="col-span-5 md:col-span-2 order-3 flex items-center justify-start md:justify-center gap-2">
+      {/* Kontrol qty dikecilkan di mobile supaya muat 4 kolom — sisanya
+          dipakai harga satuan agar bisa bergeser mendekati qty. */}
+      <div className="col-span-4 md:col-span-2 order-3 flex items-center justify-start md:justify-center gap-1 md:gap-2">
         <button
           aria-label="Decrease quantity"
           onClick={() => onUpdate(index, { qty: Math.max(1, item.qty - 1) })}
-          className="w-8 h-8 rounded-full bg-surface-container mp-outline flex items-center justify-center font-headline font-black hover:bg-secondary-fixed shrink-0"
+          className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-surface-container mp-outline flex items-center justify-center font-headline font-black hover:bg-secondary-fixed shrink-0"
         >
           −
         </button>
-        <span className="font-headline font-black w-6 text-center tabular-nums">{item.qty}</span>
+        <span className="font-headline font-black w-5 md:w-6 text-center tabular-nums">{item.qty}</span>
         <button
           aria-label="Increase quantity"
           onClick={() => onUpdate(index, { qty: item.qty + 1 })}
-          className="w-8 h-8 rounded-full bg-surface-container mp-outline flex items-center justify-center font-headline font-black hover:bg-secondary-fixed shrink-0"
+          className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-surface-container mp-outline flex items-center justify-center font-headline font-black hover:bg-secondary-fixed shrink-0"
         >
           +
         </button>
@@ -59,7 +61,7 @@ function ItemRow({
         inputMode="numeric"
         value={money(item.price)}
         onChange={(e) => onUpdate(index, { price: digitsToInt(e.target.value) })}
-        className="col-span-3 md:col-span-2 order-4 bg-transparent border-none outline-none font-body text-sm md:text-body-md font-bold text-left md:text-right tabular-nums min-w-0"
+        className="col-span-4 md:col-span-2 order-4 bg-transparent border-none outline-none font-body text-sm md:text-body-md font-bold text-left md:text-right tabular-nums min-w-0"
       />
 
       {/*
@@ -67,7 +69,7 @@ function ItemRow({
        * minmax(0,1fr) sehingga kolomnya ikut menyusut di layar sempit,
        * sementara angkanya tidak — itu yang bikin total meluber keluar kartu.
        */}
-      <p className="col-span-4 md:col-span-2 order-5 font-headline text-base md:text-money text-primary text-right tabular-nums min-w-0">
+      <p className="col-span-4 md:col-span-2 order-5 font-headline text-sm md:text-money text-primary text-right tabular-nums min-w-0">
         {money(item.price * item.qty)}
       </p>
 
@@ -129,7 +131,7 @@ export default function ItemList() {
                 onChange={(e) => setMerchant(e.target.value)}
                 onBlur={(e) => setMerchant(e.target.value.trim())}
                 placeholder="e.g. Warung Padang Sederhana"
-                className="w-full bg-transparent border-none outline-none font-headline text-xl md:text-2xl font-black placeholder:text-outline placeholder:font-bold"
+                className="w-full bg-transparent border-none outline-none font-headline text-base md:text-2xl font-black placeholder:text-outline placeholder:font-bold"
               />
             </div>
           </div>
@@ -244,7 +246,7 @@ export default function ItemList() {
 
             <div className="bg-yellow p-card-padding border-t-4 border-ink flex justify-between items-center gap-3">
               <span className="font-headline text-label-caps shrink-0">GRAND TOTAL</span>
-              <span className="font-headline text-2xl md:text-headline-sm tracking-tighter tabular-nums text-right min-w-0">
+              <span className="font-headline text-lg md:text-headline-sm tracking-tighter tabular-nums text-right min-w-0">
                 Rp {money(grandTotal)}
               </span>
             </div>
