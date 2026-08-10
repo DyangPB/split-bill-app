@@ -1,17 +1,197 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f8f7ff;
-  --foreground: #1a1a2e;
+/*
+ * Memphis / neo-brutalist design system.
+ *
+ * design.md membawa token lewat objek `tailwind.config` gaya Tailwind v3 (CDN).
+ * Proyek ini memakai Tailwind v4, jadi token dideklarasikan di CSS lewat @theme.
+ */
+@theme {
+  /* Warna inti */
+  --color-ink: #1b1b1b;
+  --color-primary: #001dcd;
+  --color-primary-container: #2b3fe8;
+  --color-secondary: #b40064;
+  --color-secondary-container: #e1007f;
+
+  /* Aksen Memphis */
+  --color-blue: #2b3fe8;
+  --color-cyan: #00d9e1;
+  --color-pink: #ff2d95;
+  --color-yellow: #ffd400;
+  --color-tomato: #ff4500;
+  --color-cream: #fffdf5;
+
+  /* Permukaan */
+  --color-background: #fffdf5;
+  --color-surface: #f9f9f9;
+  --color-surface-container: #eeeeee;
+  --color-surface-container-low: #f3f3f3;
+  --color-surface-variant: #e2e2e2;
+  --color-on-surface-variant: #444656;
+  --color-outline: #757687;
+  --color-outline-variant: #c5c5d9;
+
+  /* Fixed accents */
+  --color-tertiary-fixed: #ffe177;
+  --color-secondary-fixed: #ffd9e3;
+  --color-primary-fixed: #dfe0ff;
+  --color-on-tertiary-fixed: #231b00;
+
+  /* Status */
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+
+  /* Huruf — variabel diisi next/font di layout.tsx */
+  --font-headline: var(--font-montserrat), sans-serif;
+  --font-body: var(--font-space-grotesk), sans-serif;
+
+  --text-headline-xl: 64px;
+  --text-headline-xl--line-height: 1;
+  --text-headline-xl--letter-spacing: -0.02em;
+  --text-headline-xl--font-weight: 900;
+
+  --text-headline-lg: 40px;
+  --text-headline-lg--line-height: 1.1;
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-headline-lg--font-weight: 900;
+
+  --text-headline-sm: 32px;
+  --text-headline-sm--line-height: 1.1;
+  --text-headline-sm--font-weight: 900;
+
+  --text-label-caps: 14px;
+  --text-label-caps--line-height: 1;
+  --text-label-caps--letter-spacing: 0.15em;
+  --text-label-caps--font-weight: 700;
+
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 1.5;
+  --text-body-lg--font-weight: 500;
+
+  --text-body-md: 16px;
+  --text-body-md--line-height: 1.5;
+  --text-body-md--font-weight: 500;
+
+  --text-money: 24px;
+  --text-money--line-height: 1.2;
+  --text-money--font-weight: 900;
+
+  /* Spasi bernama dari desain */
+  --spacing-gutter: 24px;
+  --spacing-margin: 32px;
+  --spacing-card-padding: 24px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-ink);
+  font-family: var(--font-body);
   -webkit-tap-highlight-color: transparent;
 }
 
 * {
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Utilitas kanonik.
+ *
+ * Kelima desain di design.md memakai nama berbeda untuk efek yang sama
+ * (memphis-*, pm-*, border-thick/hard-shadow, dan nilai arbitrer langsung).
+ * Semuanya diseragamkan ke prefix mp-* di sini.
+ */
+@layer utilities {
+  .mp-outline {
+    border: 3px solid var(--color-ink);
+  }
+
+  .mp-shadow-sm {
+    box-shadow: 4px 4px 0 0 var(--color-ink);
+  }
+
+  .mp-shadow-md {
+    box-shadow: 5px 5px 0 0 var(--color-ink);
+  }
+
+  .mp-shadow-lg {
+    box-shadow: 8px 8px 0 0 var(--color-ink);
+  }
+
+  /* Tombol yang "tertekan" — bayangan mengecil dan elemen bergeser. */
+  .mp-press {
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+  }
+
+  .mp-press:active {
+    transform: translate(3px, 3px);
+    box-shadow: 2px 2px 0 0 var(--color-ink);
+  }
+
+  /*
+   * Kartu yang "terangkat" saat hover — mengikuti .memphis-card:hover di design.md.
+   * Dipicu dari elemen .group induk, supaya badge nomor yang menumpuk di luar
+   * kartu ikut bereaksi pada hover yang sama.
+   */
+  .mp-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  .group:hover > .mp-lift {
+    transform: translate(-3px, -3px);
+    box-shadow: 11px 11px 0 0 var(--color-ink);
+  }
+
+  .mp-rot-1 {
+    transform: rotate(1.5deg);
+  }
+
+  .mp-rot-2 {
+    transform: rotate(-1.5deg);
+  }
+
+  /* Latar titik-titik. Satu kepadatan untuk seluruh aplikasi. */
+  .mp-dots {
+    background-image: radial-gradient(var(--color-outline-variant) 1.5px, transparent 1.5px);
+    background-size: 32px 32px;
+  }
+
+  .mp-input:focus {
+    outline: none;
+    box-shadow: inset 0 0 0 4px var(--color-yellow), 4px 4px 0 0 var(--color-ink);
+  }
+
+  /* Kotak centang gaya Memphis — tanda centangnya "×", sesuai desain Assign. */
+  .mp-check {
+    appearance: none;
+    width: 2rem;
+    height: 2rem;
+    background-color: #fff;
+    border: 3px solid var(--color-ink);
+    box-shadow: 4px 4px 0 0 var(--color-ink);
+    cursor: pointer;
+    display: grid;
+    place-content: center;
+    flex-shrink: 0;
+  }
+
+  .mp-check::after {
+    content: "×";
+    color: #fff;
+    font-family: var(--font-headline);
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1;
+    transform: translateY(-1px);
+    opacity: 0;
+  }
+
+  .mp-check:checked {
+    background-color: var(--color-pink);
+  }
+
+  .mp-check:checked::after {
+    opacity: 1;
+  }
 }

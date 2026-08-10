@@ -3,18 +3,25 @@ import type { PersonBill } from '@/lib/calcBill'
 
 const money = (n: number) => 'Rp ' + n.toLocaleString('id-ID')
 
+type Options = {
+  merchant?: string | null
+  payer?: Person | null
+}
+
 export async function generatePDF(
   people: Person[],
   bill: Record<string, PersonBill>,
-  charges: Charges
+  charges: Charges,
+  options: Options = {}
 ) {
+  const { merchant = null, payer = null } = options
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
 
   const W = doc.internal.pageSize.getWidth()
   const M = 20 // margin
 
-  // ── Header bar ──────────────────────────────────────────────
+  // Header bar
   doc.setFillColor(17, 17, 17)
   doc.rect(0, 0, W, 42, 'F')
 
@@ -23,13 +30,20 @@ export async function generatePDF(
   doc.setTextColor(255, 255, 255)
   doc.text('Split Bill', M, 20)
 
+  if (merchant) {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(255, 212, 0)
+    doc.text(merchant, M, 28)
+  }
+
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
   doc.setTextColor(150, 150, 150)
   doc.text(
-    new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+    new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
     M,
-    30
+    merchant ? 35 : 30
   )
 
   const grandTotal = people.reduce((s, p) => s + bill[p.id].total, 0)
@@ -39,11 +53,11 @@ export async function generatePDF(
   doc.text(money(grandTotal), W - M, 20, { align: 'right' })
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
-  doc.text('total keseluruhan', W - M, 28, { align: 'right' })
+  doc.text('grand total', W - M, 28, { align: 'right' })
 
   let y = 58
 
-  // ── Per person ───────────────────────────────────────────────
+  // Per person
   for (const p of people) {
     const b = bill[p.id]
 
@@ -81,7 +95,7 @@ export async function generatePDF(
     // Tax
     if (charges.taxEnabled && b.taxShare > 0) {
       doc.setTextColor(130, 130, 130)
-      doc.text(`Pajak ${charges.taxRate}%`, M + 3, y)
+      doc.text(`Tax ${charges.taxRate}%`, M + 3, y)
       doc.text(`+${money(b.taxShare)}`, W - M, y, { align: 'right' })
       y += 5.5
     }
@@ -89,7 +103,7 @@ export async function generatePDF(
     // Service
     if (charges.serviceEnabled && b.serviceShare > 0) {
       doc.setTextColor(130, 130, 130)
-      doc.text(`Biaya Layanan ${charges.serviceRate}%`, M + 3, y)
+      doc.text(`Service ${charges.serviceRate}%`, M + 3, y)
       doc.text(`+${money(b.serviceShare)}`, W - M, y, { align: 'right' })
       y += 5.5
     }
@@ -97,14 +111,14 @@ export async function generatePDF(
     // Rounding note
     if (charges.roundingEnabled) {
       doc.setTextColor(160, 160, 160)
-      doc.text(`(dibulatkan ke Rp ${charges.roundTo.toLocaleString('id-ID')})`, M + 3, y)
+      doc.text(`(rounded up to Rp ${charges.roundTo.toLocaleString('id-ID')})`, M + 3, y)
       y += 5.5
     }
 
     y += 10
   }
 
-  // ── Grand total bar ──────────────────────────────────────────
+  // Grand total bar
   if (y > 265) { doc.addPage(); y = 20 }
 
   doc.setFillColor(245, 245, 245)
@@ -112,15 +126,25 @@ export async function generatePDF(
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(10)
   doc.setTextColor(17, 17, 17)
-  doc.text('Total Keseluruhan', M + 5, y + 9)
+  doc.text('Grand Total', M + 5, y + 9)
   doc.text(money(grandTotal), W - M - 5, y + 9, { align: 'right' })
   y += 24
 
-  // ── Footer ───────────────────────────────────────────────────
+  if (payer) {
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(90, 90, 90)
+    doc.text(`${payer.name} paid — everyone else settles up with them.`, W / 2, y, {
+      align: 'center',
+    })
+    y += 12
+  }
+
+  // Footer
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7.5)
   doc.setTextColor(190, 190, 190)
-  doc.text('Dibuat dengan Split Bill App', W / 2, y, { align: 'center' })
+  doc.text('Made with Split Bill App', W / 2, y, { align: 'center' })
 
   doc.save(`split-bill-${Date.now()}.pdf`)
 }

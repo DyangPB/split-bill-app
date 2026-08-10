@@ -1,126 +1,138 @@
 import Groq from 'groq-sdk'
+import { buildScanResult, RECEIPT_SCHEMA, SCAN_PROMPT, type RawScanPayload } from '@/lib/receiptScan'
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+/**
+ * Klien dibuat saat request, bukan saat modul dimuat.
+ *
+ * Dua alasan. Konstruktor Groq melempar kalau apiKey kosong, jadi memanggilnya
+ * di level modul membuat `next build` ikut gagal di mesin yang tidak memegang
+ * kunci — dan memaksa kunci ikut terbundel ke artefak deploy. Selain itu di
+ * Cloudflare Workers, process.env baru diisi dari binding saat fetch handler
+ * berjalan, sehingga pembacaan di level modul selalu meleset.
+ */
+let client: Groq | undefined
 
-function parsePrice(val: unknown): number {
-  if (typeof val === 'number') return Math.round(Math.abs(val))
-  if (typeof val === 'string') return parseInt(val.replace(/\D/g, ''), 10) || 0
-  return 0
+function getGroq(apiKey: string): Groq {
+  client ??= new Groq({ apiKey })
+  return client
+}
+
+/**
+ * Model vision di Groq bisa dipensiunkan sewaktu-waktu (llama-4-scout dulu
+ * dipakai di sini, sekarang sudah hilang). Disimpan di env supaya penggantian
+ * cukup lewat konfigurasi, bukan deploy ulang kode.
+ */
+const DEFAULT_MODEL = 'qwen/qwen3.6-27b'
+
+/** Batas aman payload gambar sebelum provider menolak dengan error mentah. */
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024
+
+type ScanErrorCode = 'config' | 'busy' | 'unreadable' | 'too_large' | 'unknown'
+
+const MESSAGES: Record<ScanErrorCode, string> = {
+  config: 'The scanning service is having trouble. Try entering items manually.',
+  busy: 'The AI service is busy right now. Wait a moment, then try again.',
+  unreadable: "Couldn't read that receipt. Try again with brighter, steadier light.",
+  too_large: 'That photo is too large. Try again at a smaller resolution.',
+  unknown: 'Could not read the receipt. Try again, or enter items manually.',
+}
+
+function fail(code: ScanErrorCode, status: number) {
+  return Response.json({ error: MESSAGES[code], code }, { status })
+}
+
+/**
+ * Pesan mentah dari provider tidak pernah sampai ke pengguna — sebelumnya
+ * "The model ... does not exist" muncul apa adanya di layar.
+ */
+function classify(err: unknown): { code: ScanErrorCode; status: number } {
+  const status = typeof (err as { status?: unknown })?.status === 'number'
+    ? (err as { status: number }).status
+    : 0
+
+  if (status === 401 || status === 403 || status === 404) return { code: 'config', status: 503 }
+  if (status === 413) return { code: 'too_large', status: 413 }
+  if (status === 429 || status === 503) return { code: 'busy', status: 503 }
+  if (status >= 500) return { code: 'busy', status: 503 }
+
+  return { code: 'unknown', status: 500 }
 }
 
 export async function POST(request: Request) {
+  const apiKey = process.env.GROQ_API_KEY
+  const model = process.env.GROQ_MODEL ?? DEFAULT_MODEL
+
+  if (!apiKey) {
+    console.error('[scan-receipt] GROQ_API_KEY tidak diset')
+    return fail('config', 503)
+  }
+
+  let base64: string
+  let mimeType: string
+
   try {
     const formData = await request.formData()
-    const file = formData.get('image') as File | null
-    if (!file) return Response.json({ error: 'Tidak ada gambar yang dikirim' }, { status: 400 })
+    const file = formData.get('image')
+
+    if (!(file instanceof File)) {
+      return Response.json({ error: 'No image was uploaded', code: 'unknown' }, { status: 400 })
+    }
 
     const bytes = await file.arrayBuffer()
-    const base64 = Buffer.from(bytes).toString('base64')
-    const mimeType = file.type || 'image/jpeg'
+    if (bytes.byteLength > MAX_IMAGE_BYTES) return fail('too_large', 413)
 
-    const prompt = `Kamu adalah AI spesialis pembaca struk belanja yang sangat teliti.
+    base64 = Buffer.from(bytes).toString('base64')
+    mimeType = file.type || 'image/jpeg'
+  } catch (err) {
+    console.error('[scan-receipt] gagal membaca upload:', err)
+    return fail('unknown', 400)
+  }
 
-ATURAN WAJIB:
+  let raw: string
 
-1. BACA SETIAP BARIS ITEM SECARA TERPISAH.
-   - Item dengan nama SAMA tapi VARIAN/TIPE/CATATAN BERBEDA = item BERBEDA.
-   - Contoh BENAR:
-     {"name":"Es Teh Manis","price":8000,"qty":1}
-     {"name":"Es Teh Tawar","price":7000,"qty":1}
-   - Contoh SALAH (jangan lakukan ini):
-     {"name":"Es Teh","price":7500,"qty":2}  ← SALAH karena harga berbeda!
-
-2. Nama item harus PERSIS seperti di struk, termasuk varian, ukuran, topping, modifier.
-   Contoh: "Latte (Iced)", "Nasi Goreng +Telur", "Paket A (Spesial)"
-
-3. WAJIB VERIFIKASI sebelum mengembalikan:
-   Hitung ulang: SUM(price × qty) untuk semua item.
-   Hasil harus sama dengan subtotal yang tertulis di struk.
-   Jika berbeda, cek ulang harga tiap item sampai cocok.
-
-4. Kembalikan HANYA JSON murni tanpa markdown:
-{
-  "items": [
-    {"name": "nama lengkap persis dari struk", "price": 12000, "qty": 1}
-  ],
-  "subtotal": 50000,
-  "tax": 11,
-  "service": 5
-}
-
-- price = harga SATUAN (integer rupiah)
-- qty = jumlah item
-- subtotal = total sebelum pajak/service, baca langsung dari struk
-- tax = persentase pajak/PPN (null jika tidak ada)
-- service = persentase biaya layanan (null jika tidak ada)
-- PASTIKAN: SUM(price × qty) == subtotal`
-
-    const completion = await groq.chat.completions.create({
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+  try {
+    const completion = await getGroq(apiKey).chat.completions.create({
+      model,
+      // Qwen3 adalah reasoning model; tanpa ini jawaban diawali blok <think>.
+      reasoning_effort: 'none',
+      response_format: {
+        type: 'json_schema',
+        json_schema: { name: 'receipt', strict: true, schema: RECEIPT_SCHEMA },
+      },
+      max_completion_tokens: 4096,
       messages: [
         {
           role: 'user',
           content: [
-            { type: 'text', text: prompt },
+            { type: 'text', text: SCAN_PROMPT },
             { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
           ],
         },
       ],
-      max_tokens: 4096,
     })
 
-    const raw = completion.choices[0]?.message?.content?.trim() ?? ''
-
-    const jsonMatch = raw.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      return Response.json(
-        { error: `AI tidak mengembalikan JSON. Respons: ${raw.slice(0, 200)}` },
-        { status: 500 }
-      )
-    }
-
-    const parsed = JSON.parse(jsonMatch[0])
-    if (!Array.isArray(parsed.items)) {
-      return Response.json({ error: 'Format items tidak valid dari AI' }, { status: 500 })
-    }
-
-    // Normalisasi items
-    let items = parsed.items
-      .map((it: Record<string, unknown>) => ({
-        name: String(it.name ?? it.nama ?? it.item ?? '').trim(),
-        price: parsePrice(it.price ?? it.harga ?? it.harga_satuan ?? 0),
-        qty: Math.max(1, Number(it.qty ?? it.jumlah ?? it.quantity ?? 1)),
-      }))
-      .filter((it: { name: string; price: number }) => it.name && it.price > 0)
-
-    const subtotal = parsePrice(parsed.subtotal ?? parsed.total ?? 0)
-    const itemsSum = items.reduce((s: number, it: { price: number; qty: number }) => s + it.price * it.qty, 0)
-
-    // Koreksi jika selisih kecil (< 5%): sesuaikan item terbesar supaya sum = subtotal
-    if (subtotal > 0 && itemsSum !== subtotal) {
-      const diff = subtotal - itemsSum
-      const diffPercent = Math.abs(diff) / subtotal
-
-      if (diffPercent < 0.05 && items.length > 0) {
-        // Cari item dengan total harga tertinggi (paling mungkin ada rounding error)
-        let maxIdx = 0
-        let maxTotal = 0
-        items.forEach((it: { price: number; qty: number }, i: number) => {
-          if (it.price * it.qty > maxTotal) { maxTotal = it.price * it.qty; maxIdx = i }
-        })
-        items[maxIdx] = {
-          ...items[maxIdx],
-          price: items[maxIdx].price + Math.round(diff / items[maxIdx].qty),
-        }
-      }
-    }
-
-    const tax = parsed.tax != null ? Math.round(Number(parsed.tax)) : null
-    const service = parsed.service != null ? Math.round(Number(parsed.service)) : null
-
-    return Response.json({ items, subtotal, tax, service })
+    raw = completion.choices[0]?.message?.content?.trim() ?? ''
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    return Response.json({ error: message }, { status: 500 })
+    const { code, status } = classify(err)
+    console.error(`[scan-receipt] panggilan model "${model}" gagal (${code}):`, err)
+    return fail(code, status)
   }
+
+  let payload: RawScanPayload
+
+  try {
+    payload = JSON.parse(raw)
+  } catch {
+    console.error('[scan-receipt] respons bukan JSON valid:', raw.slice(0, 500))
+    return fail('unreadable', 422)
+  }
+
+  const result = buildScanResult(payload)
+
+  // Model tidak pernah mengembalikan daftar kosong saat gagal — ia mengarang
+  // struk yang tampak wajar. Jadi pengakuannya sendiri yang dipakai sebagai
+  // gerbang, bukan sekadar jumlah item.
+  if (!result.isReceipt || result.items.length === 0) return fail('unreadable', 422)
+
+  return Response.json(result)
 }
