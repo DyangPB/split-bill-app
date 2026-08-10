@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "split-bill",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-08-07",
+  // nodejs_compat wajib: adapter menjalankan Next di runtime Node, bukan Edge.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    // Model vision Groq. Bukan rahasia, jadi cukup di sini — GROQ_API_KEY
+    // dipasang terpisah sebagai secret lewat `wrangler secret put`.
+    "GROQ_MODEL": "qwen/qwen3.6-27b"
+  }
+}
